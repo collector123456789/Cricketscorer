@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ match.team_one }} vs {{ match.team_two }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="scorecard-page">
+<main class="scorecard-sheet">
+    <div class="scorecard-actions">
+        <a class="ghost-link" href="/stats">Stats</a>
+        <a class="ghost-link" href="/">Scorer</a>
+    </div>
+
+    <header class="match-scorecard-head">
+        <p>{{ match.competition }} - {{ match.venue }} - {{ match.played_at.replace("T", " ") }}</p>
+        <h1>{{ match.team_one }} v/s {{ match.team_two }}</h1>
+        <strong>{{ match.result_text }}.</strong>
+    </header>
+
+    {% for innings in match.innings %}
+        {% set wd = innings.extras.wd|default(0) %}
+        {% set nb = innings.extras.nb|default(0) %}
+        {% set b = innings.extras.b|default(0) %}
+        {% set lb = innings.extras.lb|default(0) %}
+        {% set p = innings.extras.p|default(0) %}
+        {% set extras_total = wd + nb + b + lb + p %}
+        <section class="classic-innings">
+            <div class="innings-title-row">
+                <span>{{ innings.team }}</span>
+                <strong>{{ innings.score }}-{{ innings.wickets }} ({{ innings.overs }})</strong>
+            </div>
+
+            {% if innings.batters is defined %}
+                <table class="classic-table batting-card">
+                    <thead>
+                    <tr>
+                        <th>Batsman</th>
+                        <th>R</th>
+                        <th>B</th>
+                        <th>4s</th>
+                        <th>6s</th>
+                        <th>SR</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for batter in innings.batters %}
+                        <tr>
+                            <td>
+                                <span class="scorecard-player">{{ batter.name }}</span>
+                                <small>{{ batter.dismissal|default("out" if batter.out else "not out") }}</small>
+                            </td>
+                            <td>{{ batter.runs }}</td>
+                            <td>{{ batter.balls }}</td>
+                            <td>{{ batter.fours }}</td>
+                            <td>{{ batter.sixes }}</td>
+                            <td>{{ "%.2f"|format((batter.runs * 100 / batter.balls) if batter.balls else 0) }}</td>
+                        </tr>
+                    {% endfor %}
+                    <tr class="summary-row">
+                        <td>Extras</td>
+                        <td colspan="5">({{ extras_total }}) {{ b }} B, {{ lb }} LB, {{ wd }} WD, {{ nb }} NB, {{ p }} P</td>
+                    </tr>
+                    <tr class="summary-row total-row">
+                        <td>Total</td>
+                        <td colspan="5">{{ innings.score }}-{{ innings.wickets }} ({{ innings.overs }})</td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <table class="classic-table bowling-card">
+                    <thead>
+                    <tr>
+                        <th>Bowler</th>
+                        <th>O</th>
+                        <th>M</th>
+                        <th>R</th>
+                        <th>W</th>
+                        <th>ER</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for bowler in innings.bowlers %}
+                        <tr>
+                            <td>{{ bowler.name }}</td>
+                            <td>{{ bowler.balls // 6 }}.{{ bowler.balls % 6 }}</td>
+                            <td>{{ bowler.maidens }}</td>
+                            <td>{{ bowler.runs }}</td>
+                            <td>{{ bowler.wickets }}</td>
+                            <td>{{ "%.2f"|format((bowler.runs * 6 / bowler.balls) if bowler.balls else 0) }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6">No bowling figures saved.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+                <table class="classic-table fow-card">
+                    <thead>
+                    <tr>
+                        <th>Fall of wickets</th>
+                        <th>Score</th>
+                        <th>Over</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for wicket in innings.fall_of_wickets|default([]) %}
+                        <tr>
+                            <td>{{ wicket.batter }}</td>
+                            <td>{{ wicket.score }}</td>
+                            <td>{{ wicket.over }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="3">No wickets lost.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="empty scorecard-empty">This older saved match has summary only. New matches will show full scoreboards here.</p>
+            {% endif %}
+        </section>
+    {% else %}
+        <p class="empty scorecard-empty">This older match only has summary history saved. New matches will include full scoreboards.</p>
+    {% endfor %}
+</main>
+</body>
+</html>

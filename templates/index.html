@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cricket Scorer Pro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main class="app-shell">
+    <section class="topbar">
+        <div>
+            <p class="eyebrow" id="competition">{{ data.competition }}</p>
+            <h1 id="fixture">{{ data.batting_team }} vs {{ data.bowling_team }}</h1>
+            <p class="meta" id="venue">{{ data.venue }} - Innings {{ data.innings }}</p>
+            <p class="meta" id="toss-summary">{{ data.toss_text }}</p>
+        </div>
+        <div class="top-actions">
+            <a class="ghost-link" href="/stats">Player stats</a>
+            <button class="ghost-button" type="button" onclick="resetMatch()">Reset match</button>
+        </div>
+    </section>
+
+    <section class="panel setup-panel">
+        <div class="panel-head">
+            <h2>Match Setup</h2>
+            <span>Enter your match details before scoring</span>
+        </div>
+        <form class="setup-form" onsubmit="saveSetup(event)">
+            <p class="form-error" id="setup-error" hidden></p>
+            <label>
+                Competition
+                <input name="competition" type="text" value="{{ data.competition }}">
+            </label>
+            <label>
+                Teams
+                <input name="team_count" type="number" min="2" max="16" value="{{ data.team_count }}">
+            </label>
+            <label>
+                Players per team
+                <input name="players_per_team" type="number" min="2" max="11" value="{{ data.players_per_team }}">
+            </label>
+            <label>
+                Batting team
+                <input name="batting_team" type="text" value="{{ data.batting_team }}" required>
+            </label>
+            <label>
+                Bowling team
+                <input name="bowling_team" type="text" value="{{ data.bowling_team }}" required>
+            </label>
+            <label>
+                Venue
+                <input name="venue" type="text" value="{{ data.venue }}">
+            </label>
+            <label>
+                Overs
+                <input name="max_overs" type="number" min="1" max="50" value="{{ data.max_overs }}">
+            </label>
+            <label>
+                Opening bowler
+                <input name="bowler" type="text" value="{{ data.bowler.name }}" required>
+            </label>
+            <label>
+                Toss winner
+                <select name="toss_winner" id="toss-winner" required>
+                    <option value="{{ data.batting_team }}">{{ data.batting_team }}</option>
+                    <option value="{{ data.bowling_team }}">{{ data.bowling_team }}</option>
+                </select>
+            </label>
+            <label>
+                Toss decision
+                <select name="toss_decision" required>
+                    <option value="bat">Bat</option>
+                    <option value="field">Field</option>
+                </select>
+            </label>
+            <label class="players-field">
+                More team names
+                <textarea name="team_names" rows="3">{% for team in data.team_names[2:] %}{{ team }}{% if not loop.last %}
+{% endif %}{% endfor %}</textarea>
+            </label>
+            <button class="primary-button" type="submit">Start match</button>
+        </form>
+    </section>
+
+    <section class="score-hero">
+        <div class="score-main">
+            <p class="label" id="batting-team">{{ data.batting_team }}</p>
+            <div class="scoreline"><span id="score">{{ data.score }}</span>/<span id="wickets">{{ data.wickets }}</span></div>
+            <p class="meta">Overs <strong id="overs">{{ data.overs }}</strong> - CRR <strong id="run-rate">{{ data.run_rate }}</strong></p>
+        </div>
+        <div class="score-grid">
+            <div>
+                <span>Projected</span>
+                <strong id="projected">{{ data.projected_score }}</strong>
+            </div>
+            <div>
+                <span>Remaining</span>
+                <strong id="remaining">{{ data.balls_remaining }} balls</strong>
+            </div>
+            <div>
+                <span>Extras</span>
+                <strong id="extras-total">0</strong>
+            </div>
+            <div>
+                <span>Target</span>
+                <strong id="target">--</strong>
+            </div>
+            <div>
+                <span>Toss</span>
+                <strong id="toss-card">--</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="layout">
+        <div class="left-stack">
+            <section class="innings-banner" id="innings-banner" hidden>
+                <div>
+                    <strong id="innings-title">Innings complete</strong>
+                    <p id="innings-message">The side is all out.</p>
+                    <a class="history-link" id="history-link" href="/stats" hidden>Saved to match history - view stats</a>
+                </div>
+                <button class="primary-button" type="button" id="next-innings-button" onclick="startNextInnings()">Start next innings</button>
+            </section>
+
+            <section class="prompt-panel" id="batter-prompt" hidden>
+                <div>
+                    <strong>New batter required</strong>
+                    <p id="batter-prompt-text">Enter the incoming batter name.</p>
+                </div>
+                <form class="inline-form" onsubmit="submitNewBatter(event)">
+                    <p class="form-error prompt-error" id="batter-error" hidden></p>
+                    <input id="new-batter-name" name="name" type="text" placeholder="New batter name" required>
+                    <button class="primary-button" type="submit">Add batter</button>
+                </form>
+            </section>
+
+            <section class="prompt-panel" id="bowler-prompt" hidden>
+                <div>
+                    <strong>New bowler required</strong>
+                    <p>Enter the bowler for the next over.</p>
+                </div>
+                <form class="inline-form" onsubmit="submitNewBowler(event)">
+                    <p class="form-error prompt-error" id="bowler-error" hidden></p>
+                    <input id="new-bowler-name" name="name" type="text" placeholder="New bowler name" required>
+                    <button class="primary-button" type="submit">Add bowler</button>
+                </form>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <h2>Batting</h2>
+                    <span id="partnership">Live crease</span>
+                </div>
+                <div class="batters">
+                    <article class="batter active">
+                        <div>
+                            <p>Striker</p>
+                            <h3 id="striker-name">{{ data.striker_data.name }}</h3>
+                        </div>
+                        <strong><span id="striker-runs">{{ data.striker_data.runs }}</span>(<span id="striker-balls">{{ data.striker_data.balls }}</span>)</strong>
+                        <dl>
+                            <div><dt>4s</dt><dd id="striker-fours">{{ data.striker_data.fours }}</dd></div>
+                            <div><dt>6s</dt><dd id="striker-sixes">{{ data.striker_data.sixes }}</dd></div>
+                            <div><dt>SR</dt><dd id="striker-sr">{{ data.striker_data.sr }}</dd></div>
+                        </dl>
+                        <button class="retire-button" type="button" onclick="retireBatter('striker')">Retire</button>
+                    </article>
+                    <article class="batter">
+                        <div>
+                            <p>Non-striker</p>
+                            <h3 id="non-name">{{ data.non_striker_data.name }}</h3>
+                        </div>
+                        <strong><span id="non-runs">{{ data.non_striker_data.runs }}</span>(<span id="non-balls">{{ data.non_striker_data.balls }}</span>)</strong>
+                        <dl>
+                            <div><dt>4s</dt><dd id="non-fours">{{ data.non_striker_data.fours }}</dd></div>
+                            <div><dt>6s</dt><dd id="non-sixes">{{ data.non_striker_data.sixes }}</dd></div>
+                            <div><dt>SR</dt><dd id="non-sr">{{ data.non_striker_data.sr }}</dd></div>
+                        </dl>
+                        <button class="retire-button" type="button" onclick="retireBatter('non_striker')">Retire</button>
+                    </article>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <h2>Score This Ball</h2>
+                    <span id="mode-label">Normal delivery</span>
+                </div>
+                <div class="mode-row">
+                    <button class="chip selected" type="button" data-extra="" onclick="setExtra('', this)">Runs</button>
+                    <button class="chip" type="button" data-extra="wd" onclick="setExtra('wd', this)">Wide</button>
+                    <button class="chip" type="button" data-extra="nb" onclick="setExtra('nb', this)">No ball</button>
+                    <button class="chip" type="button" data-extra="b" onclick="setExtra('b', this)">Bye</button>
+                    <button class="chip" type="button" data-extra="lb" onclick="setExtra('lb', this)">Leg bye</button>
+                    <button class="chip danger" type="button" id="wicket-toggle" onclick="toggleWicket()">Wicket off</button>
+                </div>
+                <div class="run-pad">
+                    <button type="button" onclick="scoreBall(0)">0</button>
+                    <button type="button" onclick="scoreBall(1)">1</button>
+                    <button type="button" onclick="scoreBall(2)">2</button>
+                    <button type="button" onclick="scoreBall(3)">3</button>
+                    <button type="button" onclick="scoreBall(4)">4</button>
+                    <button type="button" onclick="scoreBall(6)">6</button>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <h2>Current Over</h2>
+                    <span id="bowler-name">{{ data.bowler.name }}</span>
+                </div>
+                <div class="over-strip" id="over-strip"></div>
+            </section>
+        </div>
+
+        <aside class="right-stack">
+            <section class="panel compact">
+                <div class="panel-head">
+                    <h2>Bowling</h2>
+                    <span id="bowler-economy">{{ data.bowler.economy }} econ</span>
+                </div>
+                <table>
+                    <thead>
+                    <tr><th>Bowler</th><th>O</th><th>R</th><th>W</th><th>Econ</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td id="bowler-table-name">{{ data.bowler.name }}</td>
+                        <td id="bowler-overs">{{ data.bowler.overs }}</td>
+                        <td id="bowler-runs">{{ data.bowler.runs }}</td>
+                        <td id="bowler-wickets">{{ data.bowler.wickets }}</td>
+                        <td id="bowler-table-economy">{{ data.bowler.economy }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="panel compact">
+                <div class="panel-head">
+                    <h2>Scorecard</h2>
+                    <span>Playing XI</span>
+                </div>
+                <div class="scorecard" id="scorecard"></div>
+            </section>
+
+            <section class="panel compact">
+                <div class="panel-head">
+                    <h2>Ball Log</h2>
+                    <span>Latest first</span>
+                </div>
+                <div class="timeline" id="timeline"></div>
+            </section>
+        </aside>
+    </section>
+</main>
+
+<script>
+let selectedExtra = "";
+let wicketMode = false;
+
+function totalExtras(extras) {
+    return Object.values(extras).reduce((sum, value) => sum + value, 0);
+}
+
+function setExtra(extra, button) {
+    selectedExtra = extra;
+    document.querySelectorAll(".chip[data-extra]").forEach(item => item.classList.remove("selected"));
+    button.classList.add("selected");
+    document.getElementById("mode-label").textContent = extra ? `${button.textContent} delivery` : "Normal delivery";
+}
+
+function toggleWicket() {
+    wicketMode = !wicketMode;
+    const button = document.getElementById("wicket-toggle");
+    button.textContent = wicketMode ? "Wicket on" : "Wicket off";
+    button.classList.toggle("armed", wicketMode);
+}
+
+function scoreBall(runs) {
+    fetch("/score", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({runs, extra: selectedExtra, wicket: wicketMode})
+    })
+        .then(response => response.json())
+        .then(data => {
+            render(data);
+            if (wicketMode) {
+                toggleWicket();
+            }
+        });
+}
+
+function retireBatter(slot) {
+    fetch("/retire_batter", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({slot})
+    })
+        .then(response => response.json())
+        .then(render);
+}
+
+function resetMatch() {
+    fetch("/reset", {method: "POST"})
+        .then(response => response.json())
+        .then(render);
+}
+
+function startNextInnings() {
+    fetch("/next_innings", {method: "POST"})
+        .then(response => response.json())
+        .then(render);
+}
+
+function submitNewBatter(event) {
+    event.preventDefault();
+    const input = document.getElementById("new-batter-name");
+    const error = document.getElementById("batter-error");
+    error.hidden = true;
+    fetch("/new_batter", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name: input.value})
+    })
+        .then(response => response.json().then(data => ({ok: response.ok, data})))
+        .then(({ok, data}) => {
+            if (!ok) {
+                error.textContent = data.error || "Batter name is required.";
+                error.hidden = false;
+                return;
+            }
+            input.value = "";
+            render(data);
+        });
+}
+
+function submitNewBowler(event) {
+    event.preventDefault();
+    const input = document.getElementById("new-bowler-name");
+    const error = document.getElementById("bowler-error");
+    error.hidden = true;
+    fetch("/new_bowler", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name: input.value})
+    })
+        .then(response => response.json().then(data => ({ok: response.ok, data})))
+        .then(({ok, data}) => {
+            if (!ok) {
+                error.textContent = data.error || "Bowler name is required.";
+                error.hidden = false;
+                return;
+            }
+            input.value = "";
+            render(data);
+        });
+}
+
+function saveSetup(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const payload = Object.fromEntries(new FormData(form).entries());
+    const error = document.getElementById("setup-error");
+    error.hidden = true;
+    fetch("/setup", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+    })
+        .then(response => response.json().then(data => ({ok: response.ok, data})))
+        .then(({ok, data}) => {
+            if (!ok) {
+                error.textContent = data.error || "Please enter valid match details.";
+                error.hidden = false;
+                return;
+            }
+            render(data);
+        });
+}
+
+function syncTossOptions() {
+    const battingInput = document.querySelector('input[name="batting_team"]');
+    const bowlingInput = document.querySelector('input[name="bowling_team"]');
+    const tossWinner = document.getElementById("toss-winner");
+    const previous = tossWinner.value;
+    const teams = [
+        battingInput.value.trim(),
+        bowlingInput.value.trim()
+    ].filter(Boolean);
+    tossWinner.innerHTML = teams.map(team => `<option value="${team}">${team}</option>`).join("");
+    tossWinner.value = teams.includes(previous) ? previous : teams[0];
+}
+
+function eventClass(item) {
+    const kind = item.kind || (item.label.includes("W") ? "wicket" : item.label === "4" ? "four" : item.label === "6" ? "six" : "");
+    return kind ? `highlight-${kind}` : "";
+}
+
+function render(data) {
+    document.getElementById("competition").textContent = data.competition;
+    document.getElementById("venue").textContent = `${data.venue} - Innings ${data.innings}`;
+    document.getElementById("toss-summary").textContent = data.toss_text;
+    document.getElementById("fixture").textContent = `${data.batting_team} vs ${data.bowling_team}`;
+    document.getElementById("batting-team").textContent = data.batting_team;
+    document.getElementById("score").textContent = data.score;
+    document.getElementById("wickets").textContent = data.wickets;
+    document.getElementById("overs").textContent = data.overs;
+    document.getElementById("run-rate").textContent = data.run_rate;
+    document.getElementById("projected").textContent = data.projected_score;
+    document.getElementById("remaining").textContent = `${data.balls_remaining} balls`;
+    document.getElementById("extras-total").textContent = totalExtras(data.extras);
+    document.getElementById("target").textContent = data.target || "--";
+    document.getElementById("toss-card").textContent = data.toss_winner || "--";
+    document.getElementById("partnership").textContent = `All out at ${data.all_out_at} wickets`;
+
+    const inningsBanner = document.getElementById("innings-banner");
+    const nextButton = document.getElementById("next-innings-button");
+    const historyLink = document.getElementById("history-link");
+    const batterPrompt = document.getElementById("batter-prompt");
+    const bowlerPrompt = document.getElementById("bowler-prompt");
+    inningsBanner.hidden = !data.innings_complete;
+    if (data.innings_complete) {
+        const lastInnings = data.innings_scores[data.innings_scores.length - 1];
+        document.getElementById("innings-title").textContent = data.match_complete ? "Match complete" : "Innings complete";
+        document.getElementById("innings-message").textContent = data.match_complete && data.result
+            ? `${data.result.text}. ${lastInnings.team} ${lastInnings.score}/${lastInnings.wickets} in ${lastInnings.overs} overs - ${lastInnings.reason}`
+            : `${lastInnings.team} ${lastInnings.score}/${lastInnings.wickets} in ${lastInnings.overs} overs - ${lastInnings.reason}`;
+        nextButton.hidden = data.match_complete;
+        historyLink.hidden = !data.match_complete;
+        historyLink.textContent = data.history_saved ? "Saved to match history - view stats" : "Saving match history...";
+    }
+
+    batterPrompt.hidden = !data.pending_batter || data.innings_complete;
+    bowlerPrompt.hidden = !data.pending_bowler || data.innings_complete;
+    if (data.pending_batter && !data.innings_complete) {
+        const slotText = data.pending_batter_slot === "non_striker" ? "non-striker" : "striker";
+        const promptText = data.pending_batter_index < 2
+            ? `Enter the opening ${slotText} name.`
+            : "Enter the incoming batter name.";
+        document.getElementById("batter-prompt-text").textContent = promptText;
+        document.getElementById("new-batter-name").placeholder = data.pending_batter_index < 2
+            ? `Opening ${slotText} name`
+            : "Incoming batter name";
+        document.getElementById("new-batter-name").focus();
+    } else if (data.pending_bowler && !data.innings_complete) {
+        document.getElementById("new-bowler-name").focus();
+    }
+
+    document.querySelectorAll(".run-pad button, .mode-row button, .retire-button").forEach(button => {
+        button.disabled = data.innings_complete || data.match_complete || data.pending_batter || data.pending_bowler;
+    });
+
+    renderBatter("striker", data.striker_data);
+    renderBatter("non", data.non_striker_data);
+
+    document.getElementById("bowler-name").textContent = data.bowler.name;
+    document.getElementById("bowler-economy").textContent = `${data.bowler.economy} econ`;
+    document.getElementById("bowler-table-name").textContent = data.bowler.name;
+    document.getElementById("bowler-overs").textContent = data.bowler.overs;
+    document.getElementById("bowler-runs").textContent = data.bowler.runs;
+    document.getElementById("bowler-wickets").textContent = data.bowler.wickets;
+    document.getElementById("bowler-table-economy").textContent = data.bowler.economy;
+
+    document.getElementById("over-strip").innerHTML = data.over_events.length
+        ? data.over_events.map(event => `<span class="ball ${eventClass(event)}">${event.label}</span>`).join("")
+        : `<span class="empty">New over ready</span>`;
+
+    document.getElementById("scorecard").innerHTML = data.batters.map((batter, index) => {
+        const marker = index === data.striker ? "*" : index === data.non_striker ? "ns" : "";
+        const status = batter.out ? "out" : batter.retired ? "retired" : marker;
+        return `<div class="scorecard-row">
+            <span>${batter.name}</span>
+            <strong>${batter.runs} (${batter.balls})</strong>
+            <em>${status}</em>
+        </div>`;
+    }).join("");
+
+    document.getElementById("timeline").innerHTML = data.timeline.length
+        ? data.timeline.map(item => `<div class="timeline-row ${eventClass(item)}">
+            <span>${item.over}</span>
+            <strong>${item.label}</strong>
+            <em>${item.score}</em>
+        </div>`).join("")
+        : `<p class="empty">No balls scored yet</p>`;
+}
+
+function renderBatter(prefix, batter) {
+    document.getElementById(`${prefix}-name`).textContent = batter.name;
+    document.getElementById(`${prefix}-runs`).textContent = batter.runs;
+    document.getElementById(`${prefix}-balls`).textContent = batter.balls;
+    document.getElementById(`${prefix}-fours`).textContent = batter.fours;
+    document.getElementById(`${prefix}-sixes`).textContent = batter.sixes;
+    document.getElementById(`${prefix}-sr`).textContent = batter.sr;
+}
+
+document.querySelectorAll('input[name="batting_team"], input[name="bowling_team"]').forEach(input => {
+    input.addEventListener("input", syncTossOptions);
+});
+syncTossOptions();
+render({{ data | tojson }});
+</script>
+</body>
+</html>

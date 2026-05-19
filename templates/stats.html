@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Stats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main class="app-shell stats-shell">
+    <section class="stats-hero">
+        <div>
+            <p class="eyebrow">Career Database</p>
+            <h1>Player Stats</h1>
+            <p class="meta">Auto-saved leaderboards and match history</p>
+        </div>
+        <div class="stats-actions">
+            <a class="ghost-link light" href="/">Scorer</a>
+            <form method="post" action="/reset_stats" onsubmit="return confirm('Reset all player stats and match history? This cannot be undone.');">
+                <button class="danger-button light" type="submit">Reset all stats</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="leader-cards">
+        <article class="leader-card orange">
+            <span>Orange Cap</span>
+            <h2>{{ batting[0].name if batting else "No player yet" }}</h2>
+            <strong>{{ batting[0].runs if batting else 0 }} runs</strong>
+        </article>
+        <article class="leader-card purple">
+            <span>Purple Cap</span>
+            <h2>{{ bowling[0].name if bowling else "No player yet" }}</h2>
+            <strong>{{ bowling[0].wickets if bowling else 0 }} wickets</strong>
+        </article>
+    </section>
+
+    <section class="panel leaderboard-panel">
+        <div class="panel-head">
+            <h2>Batting Leaderboard</h2>
+            <span>Sorted by most runs</span>
+        </div>
+        <div class="table-wrap">
+            <table class="stats-table rich-table">
+                <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>M</th>
+                    <th>Inns</th>
+                    <th>Runs</th>
+                    <th>Balls</th>
+                    <th>Avg</th>
+                    <th>SR</th>
+                    <th>HS</th>
+                    <th>4s</th>
+                    <th>6s</th>
+                    <th>0s</th>
+                    <th>NO</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for player in batting %}
+                    <tr class="{{ 'cap-row orange-row' if loop.first else '' }}">
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <span class="player-name">{{ player.name }}</span>
+                            {% if loop.first %}<span class="cap-badge orange-badge">Orange cap</span>{% endif %}
+                        </td>
+                        <td>{{ player.matches }}</td>
+                        <td>{{ player.batting_innings }}</td>
+                        <td>{{ player.runs }}</td>
+                        <td>{{ player.balls }}</td>
+                        <td>{{ player.batting_average }}</td>
+                        <td>{{ player.strike_rate }}</td>
+                        <td>{{ player.high_score }}</td>
+                        <td>{{ player.fours }}</td>
+                        <td>{{ player.sixes }}</td>
+                        <td>{{ player.ducks }}</td>
+                        <td>{{ player.not_outs }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="13">No completed innings yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel leaderboard-panel">
+        <div class="panel-head">
+            <h2>Bowling Leaderboard</h2>
+            <span>Sorted by most wickets</span>
+        </div>
+        <div class="table-wrap">
+            <table class="stats-table rich-table">
+                <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>M</th>
+                    <th>Inns</th>
+                    <th>Overs</th>
+                    <th>Runs</th>
+                    <th>Wkts</th>
+                    <th>Avg</th>
+                    <th>Econ</th>
+                    <th>Maidens</th>
+                    <th>Best</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for player in bowling %}
+                    <tr class="{{ 'cap-row purple-row' if loop.first else '' }}">
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <span class="player-name">{{ player.name }}</span>
+                            {% if loop.first %}<span class="cap-badge purple-badge">Purple cap</span>{% endif %}
+                        </td>
+                        <td>{{ player.matches }}</td>
+                        <td>{{ player.bowling_innings }}</td>
+                        <td>{{ player.balls_bowled // 6 }}.{{ player.balls_bowled % 6 }}</td>
+                        <td>{{ player.runs_conceded }}</td>
+                        <td>{{ player.wickets }}</td>
+                        <td>{{ player.bowling_average }}</td>
+                        <td>{{ player.economy }}</td>
+                        <td>{{ player.maidens }}</td>
+                        <td>{{ player.best_wickets }}/{{ player.best_runs }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="11">No completed innings yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel leaderboard-panel">
+        <div class="panel-head">
+            <h2>Match History</h2>
+            <span>Latest matches first</span>
+        </div>
+        <div class="history-grid">
+            {% for match in history %}
+                <a class="history-card" href="/history/{{ match.id }}">
+                    <p>{{ match.competition }} - {{ match.venue }}</p>
+                    <h3>{{ match.team_one }} vs {{ match.team_two }}</h3>
+                    <strong>{{ match.result_text }}</strong>
+                    <span>{{ match.played_at.replace("T", " ") }}</span>
+                </a>
+            {% else %}
+                <p class="empty">No completed matches yet.</p>
+            {% endfor %}
+        </div>
+    </section>
+</main>
+</body>
+</html>
