@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: cricket-scorer
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: cricket_scorer

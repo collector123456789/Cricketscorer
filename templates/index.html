@@ -57,10 +57,6 @@
                 <input name="max_overs" type="number" min="1" max="50" value="{{ data.max_overs }}">
             </label>
             <label>
-                Opening bowler
-                <input name="bowler" type="text" value="{{ data.bowler.name }}" required>
-            </label>
-            <label>
                 Toss winner
                 <select name="toss_winner" id="toss-winner" required>
                     <option value="{{ data.batting_team }}">{{ data.batting_team }}</option>
@@ -139,7 +135,7 @@
             <section class="prompt-panel" id="bowler-prompt" hidden>
                 <div>
                     <strong>New bowler required</strong>
-                    <p>Enter the bowler for the next over.</p>
+                    <p id="bowler-prompt-text">Enter the bowler for the next over.</p>
                 </div>
                 <form class="inline-form" onsubmit="submitNewBowler(event)">
                     <p class="form-error prompt-error" id="bowler-error" hidden></p>
@@ -446,6 +442,13 @@ function render(data) {
             : "Incoming batter name";
         document.getElementById("new-batter-name").focus();
     } else if (data.pending_bowler && !data.innings_complete) {
+        const openingBowler = data.legal_balls === 0 && !data.bowler.name;
+        document.getElementById("bowler-prompt-text").textContent = openingBowler
+            ? "Enter the opening bowler name."
+            : "Enter the bowler for the next over.";
+        document.getElementById("new-bowler-name").placeholder = openingBowler
+            ? "Opening bowler name"
+            : "New bowler name";
         document.getElementById("new-bowler-name").focus();
     }
 

@@ -595,6 +595,10 @@ table {
     min-width: 880px;
 }
 
+.complete-stats-table {
+    min-width: 1480px;
+}
+
 .stats-section {
     margin-top: 16px;
 }
@@ -637,6 +641,40 @@ table {
 
 .stats-actions form {
     margin: 0;
+}
+
+.import-form {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.import-label {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.import-label input[type="file"] {
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-soft);
+    color: var(--ink);
+    font: inherit;
+}
+
+.import-help {
+    margin-top: 12px;
+}
+
+.import-help code {
+    font-size: 0.95em;
 }
 
 .danger-button {
@@ -1114,6 +1152,10 @@ th {
     .leader-cards,
     .history-grid {
         grid-template-columns: 1fr;
+    }
+
+    .import-form {
+        display: grid;
     }
 
     .stats-hero {

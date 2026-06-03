@@ -22,6 +22,46 @@
         </div>
     </section>
 
+    {% if mongo_status %}
+        <section class="panel leaderboard-panel">
+            <div class="panel-head">
+                <h2>MongoDB Status</h2>
+                <span>Stats storage</span>
+            </div>
+            <p class="form-error">{{ mongo_status }}</p>
+            {% if can_migrate %}
+                <form method="post" action="/migrate_to_mongo" onsubmit="return confirm('Import existing SQLite stats into MongoDB?');">
+                    <button class="primary-button" type="submit">Import SQLite data into MongoDB</button>
+                </form>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <section class="panel leaderboard-panel">
+        <div class="panel-head">
+            <h2>Import Data</h2>
+            <span>Add more stats from a file</span>
+        </div>
+        <form class="import-form" method="post" action="/import_stats" enctype="multipart/form-data">
+            <label class="import-label">
+                Import file
+                <input name="import_file" type="file" accept=".json,.csv,.pdf,.jpeg,.jpg,.png" required>
+            </label>
+            <button class="primary-button" type="submit">Import file</button>
+        </form>
+        <p class="meta import-help">JSON supports full imports with <code>player_stats</code> and <code>match_history</code> arrays. CSV imports player totals by column name and must include <code>name</code>. PDF imports require extractable text and support scorecard tables like <code>Batsman R B 4s 6s SR</code> and <code>Bowler O M R W ER</code>. JPEG, JPG, and PNG imports use OCR and require Tesseract plus the Python image dependencies.</p>
+    </section>
+
+    {% if migration_message %}
+        <section class="panel leaderboard-panel">
+            <div class="panel-head">
+                <h2>Import Status</h2>
+                <span>Migration and file uploads</span>
+            </div>
+            <p class="meta">{{ migration_message }}</p>
+        </section>
+    {% endif %}
+
     <section class="leader-cards">
         <article class="leader-card orange">
             <span>Orange Cap</span>
@@ -129,6 +169,69 @@
                     </tr>
                 {% else %}
                     <tr><td colspan="11">No completed innings yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel leaderboard-panel">
+        <div class="panel-head">
+            <h2>All Player Stats</h2>
+            <span>Every saved batting and bowling field</span>
+        </div>
+        <div class="table-wrap">
+            <table class="stats-table rich-table complete-stats-table">
+                <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>M</th>
+                    <th>Bat Inns</th>
+                    <th>NO</th>
+                    <th>Runs</th>
+                    <th>Balls</th>
+                    <th>Avg</th>
+                    <th>SR</th>
+                    <th>HS</th>
+                    <th>4s</th>
+                    <th>6s</th>
+                    <th>0s</th>
+                    <th>Bowl Inns</th>
+                    <th>Overs</th>
+                    <th>Runs Given</th>
+                    <th>Wkts</th>
+                    <th>Bowl Avg</th>
+                    <th>Econ</th>
+                    <th>Maidens</th>
+                    <th>Best</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for player in all_players %}
+                    <tr>
+                        <td><span class="player-name">{{ player.name }}</span></td>
+                        <td>{{ player.matches }}</td>
+                        <td>{{ player.batting_innings }}</td>
+                        <td>{{ player.not_outs }}</td>
+                        <td>{{ player.runs }}</td>
+                        <td>{{ player.balls }}</td>
+                        <td>{{ player.batting_average }}</td>
+                        <td>{{ player.strike_rate }}</td>
+                        <td>{{ player.high_score }}</td>
+                        <td>{{ player.fours }}</td>
+                        <td>{{ player.sixes }}</td>
+                        <td>{{ player.ducks }}</td>
+                        <td>{{ player.bowling_innings }}</td>
+                        <td>{{ player.balls_bowled // 6 }}.{{ player.balls_bowled % 6 }}</td>
+                        <td>{{ player.runs_conceded }}</td>
+                        <td>{{ player.wickets }}</td>
+                        <td>{{ player.bowling_average }}</td>
+                        <td>{{ player.economy }}</td>
+                        <td>{{ player.maidens }}</td>
+                        <td>{{ player.best_wickets }}/{{ player.best_runs }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="20">No player stats yet.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
