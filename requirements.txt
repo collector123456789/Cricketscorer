@@ -6,3 +6,4 @@ pypdf>=5,<6
 pymongo[srv]>=4.8,<5
 python-dotenv>=1.0,<2
 pytesseract>=0.3.13,<0.4
+dnspython>=2.4
