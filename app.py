@@ -463,11 +463,17 @@ def valid_player_name(name):
 
 
 def player_upsert_update(name, inc=None, max_values=None):
-    update = {"$setOnInsert": base_player_doc(name)}
+    base = base_player_doc(name)
+    defaults = {field: {"$ifNull": [f"${field}", value]} for field, value in base.items()}
+    defaults["name"] = name
+    update = [{"$set": defaults}]
+    stat_updates = {}
     if inc:
-        update["$inc"] = inc
+        stat_updates.update({field: {"$add": [f"${field}", value]} for field, value in inc.items()})
     if max_values:
-        update["$max"] = max_values
+        stat_updates.update({field: {"$max": [f"${field}", value]} for field, value in max_values.items()})
+    if stat_updates:
+        update.append({"$set": stat_updates})
     return update
 
 
@@ -1437,6 +1443,36 @@ def match_detail(match_id):
     return detail
 
 
+def delete_player_stat(name):
+    if not valid_player_name(name):
+        return False
+    if not using_mongo():
+        with get_db() as conn:
+            cursor = conn.execute("DELETE FROM player_stats WHERE name = ?", (name,))
+            return cursor.rowcount > 0
+    try:
+        result = players_collection.delete_one({"name": name})
+        return result.deleted_count > 0
+    except PyMongoError as error:
+        set_mongo_error(error)
+        return False
+
+
+def delete_match_history(match_id):
+    if not match_id:
+        return False
+    if not using_mongo():
+        with get_db() as conn:
+            cursor = conn.execute("DELETE FROM match_history WHERE id = ?", (match_id,))
+            return cursor.rowcount > 0
+    try:
+        result = history_collection.delete_one({"id": match_id})
+        return result.deleted_count > 0
+    except PyMongoError as error:
+        set_mongo_error(error)
+        return False
+
+
 def can_migrate_sqlite_to_mongo():
     if not using_mongo():
         return False
@@ -1890,6 +1926,20 @@ def history_scorecard(match_id):
     if not match:
         return "Match not found", 404
     return render_template("match_detail.html", match=match)
+
+
+@app.route("/players/<path:name>/delete", methods=["POST"])
+def delete_player_stat_route(name):
+    deleted = delete_player_stat(name)
+    message = f"Deleted player stat for {name}." if deleted else f"Player stat for {name} was not found."
+    return redirect(url_for("stats_page", migration=message))
+
+
+@app.route("/history/<match_id>/delete", methods=["POST"])
+def delete_match_history_route(match_id):
+    deleted = delete_match_history(match_id)
+    message = "Deleted match history entry." if deleted else "Match history entry was not found."
+    return redirect(url_for("stats_page", migration=message))
 
 
 @app.route("/stats.json")

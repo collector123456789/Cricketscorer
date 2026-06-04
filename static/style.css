@@ -698,6 +698,16 @@ table {
     filter: brightness(1.06);
 }
 
+.table-danger {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
+.inline-delete-form {
+    margin: 0;
+}
+
 .leader-cards {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -821,9 +831,27 @@ table {
     transition: transform 140ms ease, border-color 140ms ease;
 }
 
+.history-card-with-actions {
+    display: grid;
+    gap: 12px;
+}
+
+.history-card-link {
+    color: inherit;
+    text-decoration: none;
+}
+
 .history-card:hover {
     transform: translateY(-2px);
     border-color: var(--green);
+}
+
+.history-card form {
+    margin: 0;
+}
+
+.history-danger {
+    width: 100%;
 }
 
 .history-card p,

@@ -204,6 +204,7 @@
                     <th>Econ</th>
                     <th>Maidens</th>
                     <th>Best</th>
+                    <th>Action</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -229,9 +230,14 @@
                         <td>{{ player.economy }}</td>
                         <td>{{ player.maidens }}</td>
                         <td>{{ player.best_wickets }}/{{ player.best_runs }}</td>
+                        <td>
+                            <form class="inline-delete-form" method="post" action="{{ url_for('delete_player_stat_route', name=player.name) }}" onsubmit="return confirm({{ ('Delete stats for ' ~ player.name ~ '? This cannot be undone.')|tojson }});">
+                                <button class="danger-button table-danger" type="submit">Delete</button>
+                            </form>
+                        </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="20">No player stats yet.</td></tr>
+                    <tr><td colspan="21">No player stats yet.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
@@ -245,12 +251,17 @@
         </div>
         <div class="history-grid">
             {% for match in history %}
-                <a class="history-card" href="/history/{{ match.id }}">
-                    <p>{{ match.competition }} - {{ match.venue }}</p>
-                    <h3>{{ match.team_one }} vs {{ match.team_two }}</h3>
-                    <strong>{{ match.result_text }}</strong>
-                    <span>{{ match.played_at.replace("T", " ") }}</span>
-                </a>
+                <article class="history-card history-card-with-actions">
+                    <a class="history-card-link" href="/history/{{ match.id }}">
+                        <p>{{ match.competition }} - {{ match.venue }}</p>
+                        <h3>{{ match.team_one }} vs {{ match.team_two }}</h3>
+                        <strong>{{ match.result_text }}</strong>
+                        <span>{{ match.played_at.replace("T", " ") }}</span>
+                    </a>
+                    <form method="post" action="{{ url_for('delete_match_history_route', match_id=match.id) }}" onsubmit="return confirm('Delete this match history entry? This cannot be undone.');">
+                        <button class="danger-button history-danger" type="submit">Delete history</button>
+                    </form>
+                </article>
             {% else %}
                 <p class="empty">No completed matches yet.</p>
             {% endfor %}
